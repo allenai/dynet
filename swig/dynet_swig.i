@@ -297,7 +297,7 @@ struct Trainer {
 };
 
 struct SimpleSGDTrainer : public Trainer {
-  explicit SimpleSGDTrainer(Model* m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
+  explicit SimpleSGDTrainer(Model& m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
 };
 
 %nodefaultctor RNNBuilder;
@@ -318,7 +318,7 @@ struct LSTMBuilder : public RNNBuilder {
   explicit LSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model* model);
+                       Model& model);
 };
 
 void initialize(int& argc, char**& argv, bool shared_parameters = false);
