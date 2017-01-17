@@ -12,6 +12,9 @@
 // Required header files for compiling wrapped code
 %{
 #include <vector>
+#include <sstream>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 #include "model.h"
 #include "tensor.h"
 #include "dynet.h"
@@ -39,7 +42,6 @@ static void myInitialize()  {
 %include "std_string.i"
 %include "std_pair.i"
 
-
 struct dynet::expr::Expression;
 
 // Declare explicit types for needed instantiations of generic types
@@ -61,7 +63,6 @@ namespace dynet {
 
 // Some declarations etc to keep swig happy
 typedef float real;
-
 typedef int RNNPointer;
 struct VariableIndex;
 /*{
@@ -73,6 +74,8 @@ struct Node;
 struct ParameterStorage;
 struct LookupParameterStorage;
 
+// declarations from dynet/dim.h
+
 struct Dim {
   Dim() : nd(0), bd(1) {}
   Dim(const std::vector<long> & x);
@@ -80,6 +83,35 @@ struct Dim {
 
   unsigned int size();
 };
+
+// declarations from dynet/model.h
+
+// Model wrapper class needs to implement Serializable. We serialize a Model by converting it
+// to/from a String and using writeObject/readObject on the String.
+%typemap(javainterfaces) dynet::Model "java.io.Serializable"
+
+%typemap(javacode) dynet::Model %{
+ private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+    out.defaultWriteObject();
+    String s = this.serialize_to_string();
+    out.writeObject(s);
+ }
+
+ private void readObject(java.io.ObjectInputStream in)
+     throws java.io.IOException, java.lang.ClassNotFoundException {
+    in.defaultReadObject();
+    String s = (String) in.readObject();
+
+    // Deserialization doesn't call the constructor, so the swigCPtr is 0. This means we need to
+    // do the constructor work ourselves if we don't want a segfault.
+    if (this.swigCPtr == 0) {
+        this.swigCPtr = dynet_swigJNI.new_Model();
+        this.swigCMemOwn = true;
+    }
+
+    this.load_from_string(s);
+ }
+%}
 
 class Model;
 struct Parameter {
@@ -144,9 +176,30 @@ class Model {
   LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
   // LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init);
 
+  size_t parameter_count() const;
 };
 
-struct ComputationGraph;
+void save_dynet_model(std::string filename, Model* model);
+void load_dynet_model(std::string filename, Model* model);
+
+// extra code to serialize / deserialize strings
+%extend Model {
+   std::string serialize_to_string() {
+       std::ostringstream out;
+       boost::archive::text_oarchive oa(out);
+       oa << (*($self));
+       return out.str();
+   }
+
+   void load_from_string(std::string serialized) {
+       std::istringstream in;
+       in.str(serialized);
+       boost::archive::text_iarchive ia(in);
+       ia >> (*($self));
+   }
+};
+
+// declarations from dynet/tensor.h
 
 struct Tensor {
   Dim d;
@@ -156,6 +209,10 @@ struct Tensor {
 
 real as_scalar(const Tensor& t);
 std::vector<real> as_vector(const Tensor& v);
+
+// declarations from dynet/expr.h
+
+struct ComputationGraph;
 
 namespace expr {
 struct Expression {
@@ -205,11 +262,15 @@ Expression operator/(const Expression& x, float y); // { return x * (1.f / y); }
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
 Expression log(const Expression& x);
+Expression min(const Expression& x, const Expression& y);
+Expression max(const Expression& x, const Expression& y);
+Expression dot_product(const Expression& x, const Expression& y);
 Expression squared_distance(const Expression& x, const Expression& y);
 Expression square(const Expression& x);
 
 Expression select_rows(const Expression& x, const std::vector<unsigned> &rows);
 Expression select_cols(const Expression& x, const std::vector<unsigned> &cols);
+Expression reshape(const Expression& x, const Dim& d);
 Expression pick(const Expression& x, unsigned v);
 Expression pickrange(const Expression& x, unsigned v, unsigned u);
 
@@ -225,6 +286,14 @@ template <typename T>
 Expression affine_transform(const T& xs);
 %template(affine_transform_VE) affine_transform<std::vector<Expression>>;
 
+template <typename T>
+Expression concatenate_cols(const T& xs);
+%template(concatenate_cols_VE) concatenate_cols<std::vector<Expression>>;
+
+template <typename T>
+Expression concatenate(const T& xs);
+%template(concatenate_VE) concatenate<std::vector<Expression>>;
+
 /*
 template <typename T>
 inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }
@@ -235,6 +304,8 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
 
 } // namespace expr
 
+
+// declarations from dynet/dynet.h
 
 struct ComputationGraph {
   ComputationGraph();
@@ -278,6 +349,8 @@ struct ComputationGraph {
 };
 
 
+// declarations from dynet/training.h
+
 // Need to disable constructor as SWIG gets confused otherwise
 %nodefaultctor Trainer;
 struct Trainer {
@@ -300,6 +373,8 @@ struct SimpleSGDTrainer : public Trainer {
   explicit SimpleSGDTrainer(Model& m, real e0 = 0.1, real edecay = 0.0) : Trainer(m, e0, edecay) {}
 };
 
+// declarations from dynet/rnn.h
+
 %nodefaultctor RNNBuilder;
 struct RNNBuilder {
   RNNPointer state() const;
@@ -313,6 +388,8 @@ struct RNNBuilder {
   std::vector<dynet::expr::Expression> final_h() const;
 };
 
+// declarations from dynet/lstm.h
+
 struct LSTMBuilder : public RNNBuilder {
   //LSTMBuilder() = default;
   explicit LSTMBuilder(unsigned layers,
@@ -321,10 +398,16 @@ struct LSTMBuilder : public RNNBuilder {
                        Model& model);
 };
 
+// declarations from dynet/init.h
+
 void initialize(int& argc, char**& argv, bool shared_parameters = false);
+void cleanup();
+
+
+// additional declarations
 
 static void myInitialize();
-void cleanup();
+
 
 }
 
