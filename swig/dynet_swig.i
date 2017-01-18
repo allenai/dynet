@@ -41,6 +41,10 @@ static void myInitialize()  {
 %include "std_vector.i"
 %include "std_string.i"
 %include "std_pair.i"
+%include "cpointer.i"
+
+%pointer_functions(int, intp);
+%pointer_functions(float, floatp);
 
 struct dynet::expr::Expression;
 
