@@ -13,7 +13,6 @@ namespace dynet {
 // y = M + v (broadcasting over columns)
 struct AddVectorToAllColumns : public Node {
   explicit AddVectorToAllColumns(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
@@ -372,7 +371,8 @@ struct LogDet : public Node {
 struct Sum : public Node {
   template <typename T> explicit Sum(const T& a) : Node(a) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
-  virtual bool supports_multibatch() const override { return true; }
+  // TODO: Sum should be be implemented over the entire mini-batch, but this is not
+  //       super-easy in the current implementation
 };
 
 // y = \sum_i x_i
@@ -492,19 +492,18 @@ struct RestrictedLogSoftmax : public Node {
 // y = (x_1)_{*pval}
 // this is used to implement cross-entropy training
 struct PickElement : public Node {
-  explicit PickElement(const std::initializer_list<VariableIndex>& a, unsigned v, unsigned d = 0) : Node(a), val(v), pval(&val), vals(), pvals(), dimension(d) {}
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, unsigned v) : Node(a), val(v), pval(&val), vals(), pvals() {}
   // use this constructor if you want to perform mini-batching
-  explicit PickElement(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& v, unsigned d = 0) : Node(a), val(), pval(), vals(v), pvals(&vals), dimension(d) {}
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>& v) : Node(a), val(), pval(), vals(v), pvals(&vals) {}
   // use these constructors if you want to change the value after the graph is constructed
-  explicit PickElement(const std::initializer_list<VariableIndex>& a, const unsigned* pv, unsigned d = 0) : Node(a), val(), pval(pv), vals(), pvals(), dimension(d) {}
-  explicit PickElement(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pv, unsigned d = 0) : Node(a), val(), pval(), vals(), pvals(pv), dimension(d) {}
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, const unsigned* pv) : Node(a), val(), pval(pv), vals(), pvals() {}
+  explicit PickElement(const std::initializer_list<VariableIndex>& a, const std::vector<unsigned>* pv) : Node(a), val(), pval(), vals(), pvals(pv) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
   unsigned val;
   const unsigned* pval;
   std::vector<unsigned> vals;
   const std::vector<unsigned>* pvals;
-  unsigned dimension;
 };
 
 // x_1 is a vector
@@ -534,11 +533,10 @@ struct RandomNormal : public Node {
 
 // draw from Bernoulli(p)
 struct RandomBernoulli : public Node {
-  explicit RandomBernoulli(const std::initializer_list<VariableIndex>& a, const Dim& d, real p, real scale = 1.0f) : dim(d), p(p), scale(scale) { assert (a.size() == 0); }
+  explicit RandomBernoulli(const std::initializer_list<VariableIndex>& a, const Dim& d, real p) : dim(d), p(p) { assert (a.size() == 0); }
   DYNET_NODE_DEFINE_DEV_IMPL()
   Dim dim;
   real p;
-  real scale;
 };
 
 // draw a random real from Uniform(left, right)

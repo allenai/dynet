@@ -35,13 +35,13 @@ private:
   }
 };
 
-struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
-  NaryTreeLSTMBuilder() = default;
-  explicit NaryTreeLSTMBuilder(unsigned N, //Max branching factor
+struct SocherTreeLSTMBuilder : public TreeLSTMBuilder {
+  SocherTreeLSTMBuilder() = default;
+  explicit SocherTreeLSTMBuilder(unsigned N, //Max branching factor
                        unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model);
+                       Model* model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
   void copy(const RNNBuilder & params) override;
@@ -88,7 +88,7 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   explicit UnidirectionalTreeLSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model);
+                       Model* model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
  protected:
@@ -100,6 +100,8 @@ struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   std::vector<Expression> h;
 
 private:
+  ComputationGraph* cg;
+
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive& ar, const unsigned int) {
@@ -113,7 +115,7 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   explicit BidirectionalTreeLSTMBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       Model& model);
+                       Model* model);
 
   Expression add_input(int id, std::vector<int> children, const Expression& x) override;
  protected:
@@ -127,6 +129,8 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
   std::vector<Expression> h;
 
 private:
+  ComputationGraph* cg;
+
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive& ar, const unsigned int) {
@@ -138,7 +142,7 @@ private:
 } // namespace dynet
 
 BOOST_CLASS_EXPORT_KEY(dynet::TreeLSTMBuilder)
-BOOST_CLASS_EXPORT_KEY(dynet::NaryTreeLSTMBuilder)
+BOOST_CLASS_EXPORT_KEY(dynet::SocherTreeLSTMBuilder)
 BOOST_CLASS_EXPORT_KEY(dynet::UnidirectionalTreeLSTMBuilder)
 BOOST_CLASS_EXPORT_KEY(dynet::BidirectionalTreeLSTMBuilder)
 

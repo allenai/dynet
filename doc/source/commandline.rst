@@ -1,7 +1,5 @@
-.. _command-line-options:
-
-Command Line Options
-====================
+DyNet Command Line Options
+==========================
 
 All programs using DyNet have a few command line options. These must be
 specified at the very beginning of the command line, before other
@@ -16,11 +14,8 @@ options.
    variables ``--dynet-mem FOR,BACK,PARAM``. This is useful if, for
    example, you are performing testing and don't need to allocate any
    memory for backward calculation.
--  ``--dynet-weight-decay NUMBER``: Adds weight decay to the parameters,
-   which modifies each parameter w such that `w *= (1-weight_decay)` after
-   every update. This is similar to L2 regularization, but different in a
-   couple ways, which are noted in detail in the "Unorthodox Design"
-   section.
+-  ``--dynet-l2 NUMBER``: Specifies the level of l2 regularization to
+   use (default 1e-6).
 -  ``--dynet-gpus NUMBER``: Specify how many GPUs you want to use, if
    DyNet is compiled with CUDA. Currently, only one GPU is supported.
 -  ``--dynet-gpu-ids X,Y,Z``: Specify the GPUs that you want to use by

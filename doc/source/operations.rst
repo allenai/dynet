@@ -1,7 +1,5 @@
-.. _operations:
-
-Operations
-==========
+DyNet Operations
+================
 
 Operation Interface
 -------------------
